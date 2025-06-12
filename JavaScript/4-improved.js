@@ -11,21 +11,23 @@ class ObjectPool {
 
   _processQueue() {
     while (this.queue.length > 0 && this.available > 0){
-      const { callback } = this.queue.shift();
-      callback(this.instances.pop());
+      const { resolve } = this.queue.shift();
+      resolve(this.instances.pop());
       this.available--;
     }
   };
 
-  acquire (callback) {
-    if(this.available > 0){
+  acquire () {
+    return new Promise((resolve) => {
+      if(this.available > 0){
       const instance = this.instances.pop();
       this.available--;
-      callback(instance);
-    }
-    else{
-      this.queue.push({ callback });
-    }
+      resolve(instance);
+      }
+      else{
+        this.queue.push({ resolve });
+      }
+    });
   };
 
   release (instance) {
@@ -46,34 +48,32 @@ const createFileBuffer = () => createBuffer(FILE_BUFFER_SIZE);
 
 const pool = new ObjectPool(createFileBuffer, { size: 2, max: 4 });
 
-pool.acquire((instance1) => {
+(async () => {
+  const instance1 = await pool.acquire();
   console.log('Acquired instance 1', instance1);
   setTimeout(() => {
     console.log('Releasing instance 1');
     pool.release(instance1);
   }, 1000);
-});
 
-pool.acquire((instance2) => {
+  const instance2 = await pool.acquire();
   console.log('Acquired instance 2', instance2);
   setTimeout(() => {
     console.log('Releasing instance 2');
     pool.release(instance2);
   }, 1500);
-});
 
-pool.acquire((instance3) => {
+  const instance3 = await pool.acquire();
   console.log('Acquired instance 3', instance3);
   setTimeout(() => {
     console.log('Releasing instance 3');
     pool.release(instance3);
   }, 1000);
-});
 
-pool.acquire((instance4) => {
+  const instance4 = await pool.acquire();
   console.log('Acquired instance 4', instance4);
   setTimeout(() => {
     console.log('Releasing instance 4');
     pool.release(instance4);
   }, 1500);
-});
+})();
