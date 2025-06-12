@@ -7,21 +7,23 @@ const poolify = (factory, size, max) => {
 
   const processQueue = () => {
     while (queue.length > 0 && available > 0){
-      const { callback } = queue.shift();
-      callback(instances.pop());
+      const { resolve } = queue.shift();
+      resolve(instances.pop());
       available--;
     }
   };
 
-  const acquire = (callback) => {
-    if(available > 0){
-      const instance = instances.pop();
-      available--;
-      callback(instance);
-    }
-    else {
-      queue.push({ callback });
-    }
+  const acquire = () => {
+    return new Promise((resolve) => {
+      if(available > 0){
+        const instance = instances.pop();
+        available--;
+        resolve(instance);
+      }
+      else {
+        queue.push({ resolve });
+      }
+    });
   };
 
   const release = (instance) => {
@@ -46,34 +48,32 @@ const size = 2;
 const max = 4;
 const pool = poolify(createFileBuffer, size, max);
 
-pool.acquire((instance1) => {
+(async () => {
+  const instance1 = await pool.acquire();
   console.log('Acquired instance 1', instance1);
   setTimeout(() => {
     console.log('Releasing instance 1');
     pool.release(instance1);
   }, 1000);
-});
 
-pool.acquire((instance2) => {
+  const instance2 = await pool.acquire();
   console.log('Acquired instance 2', instance2);
   setTimeout(() => {
     console.log('Releasing instance 2');
     pool.release(instance2);
   }, 1500);
-});
 
-pool.acquire((instance3) => {
+  const instance3 = await pool.acquire();
   console.log('Acquired instance 3', instance3);
   setTimeout(() => {
     console.log('Releasing instance 3');
     pool.release(instance3);
   }, 1000);
-});
 
-pool.acquire((instance4) => {
+  const instance4 = await pool.acquire();
   console.log('Acquired instance 4', instance4);
   setTimeout(() => {
     console.log('Releasing instance 4');
     pool.release(instance4);
   }, 1500);
-});
+})();
